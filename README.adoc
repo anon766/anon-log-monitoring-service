@@ -1,381 +1,305 @@
-:spring_boot_version: current
-:spring-boot: https://github.com/spring-projects/spring-boot
-:toc:
-:icons: font
-:source-highlighter: prettify
-:project_id: gs-spring-boot
+# Log Monitoring Service
 
-This guide provides a sampling of how {spring-boot}[Spring Boot] helps you accelerate
-application development. As you read more Spring Getting Started guides, you will see more
-use cases for Spring Boot. This guide is meant to give you a quick taste of Spring Boot.
-If you want to create your own Spring Boot-based project, visit
-https://start.spring.io/[Spring Initializr], fill in your project details, pick your
-options, and download a bundled up project as a zip file.
+A lightweight, real-time log file monitoring service built with Spring Boot that actively monitors specified log files for important patterns and generates standardized alerts when patterns are detected.
 
-== What You Will build
+## Overview
 
-You will build a simple web application with Spring Boot and add some useful services to
-it.
+This service is designed for microservices ecosystems where multiple services generate logs in different formats. It provides:
 
-== What You Need
+- **Real-time Monitoring**: Processes new log entries as soon as they are written to files
+- **Configuration-Driven Rules**: All monitoring rules are externalized in a JSON configuration file
+- **Dynamic Configuration**: Hot-reloads configuration changes without requiring application restart
+- **Standardized Alerts**: Transforms all alerts into a consistent JSON format regardless of source log format
+- **File Creation Handling**: Automatically starts monitoring files that don't exist initially when they are created later
 
-:java_version: 17
-include::https://raw.githubusercontent.com/spring-guides/getting-started-macros/main/prereq_editor_jdk_buildtools.adoc[]
+## Features
 
-include::https://raw.githubusercontent.com/spring-guides/getting-started-macros/main/how_to_complete_this_guide.adoc[]
+### Core Capabilities
 
-== Learn What You Can Do with Spring Boot
+- ✅ **Real-time log file monitoring** using Apache Commons IO Tailer
+- ✅ **Pattern matching** using regular expressions
+- ✅ **Multiple log format support** (JSON, key-value pairs, plain text)
+- ✅ **Automatic file detection** for files created after service startup
+- ✅ **Hot configuration reload** - changes to rules are applied automatically
+- ✅ **File rotation handling** - automatically handles log file rotation
+- ✅ **Standardized alert format** - all alerts in consistent JSON structure
 
-Spring Boot offers a fast way to build applications. It looks at your classpath and at the
-beans you have configured, makes reasonable assumptions about what you are missing, and
-adds those items. With Spring Boot, you can focus more on business features and less on
-infrastructure.
+### Technical Features
 
-The following examples show what Spring Boot can do for you:
+- **Low Latency**: Polls files every 100ms for near real-time processing
+- **Efficient**: Only reads new lines, maintains file position
+- **Resilient**: Handles missing files gracefully, queues them for monitoring when created
+- **Thread-Safe**: Concurrent file monitoring with proper resource management
 
-- Is Spring MVC on the classpath? There are several specific beans you almost always need,
-and Spring Boot adds them automatically. A Spring MVC application also needs a servlet
-container, so Spring Boot automatically configures embedded Tomcat.
-- Is Jetty on the classpath? If so, you probably do NOT want Tomcat but instead want
-embedded Jetty. Spring Boot handles that for you.
-- Is Thymeleaf on the classpath? If so, there are a few beans that must always be added to
-your application context. Spring Boot adds them for you.
+## Architecture
 
-These are just a few examples of the automatic configuration Spring Boot provides. At the
-same time, Spring Boot does not get in your way. For example, if Thymeleaf is on your
-path, Spring Boot automatically adds a `SpringTemplateEngine` to your application context.
-But if you define your own `SpringTemplateEngine` with your own settings, Spring Boot does
-not add one. This leaves you in control with little effort on your part.
+### Components
 
-NOTE: Spring Boot does not generate code or make edits to your files. Instead, when you
-start your application, Spring Boot dynamically wires up beans and settings and applies
-them to your application context.
+1. **LogFileMonitor** (`LogFileMonitor.java`)
+   - Core file monitoring using Apache Commons IO Tailer
+   - Handles file existence checking and pending file queue
+   - Manages background threads for file monitoring
 
-[[scratch]]
-== Starting with Spring Initializr
+2. **LogMonitoringService** (`LogMonitoringService.java`)
+   - Orchestrates monitoring rules
+   - Applies pattern matching to log lines
+   - Triggers alert generation
 
-You can use this https://start.spring.io/#!type=maven-project&language=java&packaging=jar&jvmVersion=17&groupId=com.example&artifactId=spring-boot&name=spring-boot&description=Demo%20project%20for%20Spring%20Boot&packageName=com.example.spring-boot&dependencies=web[pre-initialized project] and click Generate to download a ZIP file. This project is configured to fit the examples in this tutorial.
+3. **LogPatternMatcher** (`LogPatternMatcher.java`)
+   - Regular expression pattern matching
+   - Extracts matched groups from log lines
 
-To manually initialize the project:
+4. **AlertService** (`AlertService.java`)
+   - Generates standardized JSON alerts
+   - Sends alerts to configured destinations (console, webhook, etc.)
 
-. Navigate to https://start.spring.io.
-This service pulls in all the dependencies you need for an application and does most of the setup for you.
-. Choose either Gradle or Maven and the language you want to use. This guide assumes that you chose Java.
-. Click *Dependencies* and select *Spring Web*.
-. Click *Generate*.
-. Download the resulting ZIP file, which is an archive of a web application that is configured with your choices.
+5. **MonitoringConfigService** (`MonitoringConfigService.java`)
+   - Loads monitoring rules from JSON configuration
+   - Watches configuration file for changes
+   - Hot-reloads rules when configuration changes
 
-NOTE: If your IDE has the Spring Initializr integration, you can complete this process from your IDE.
+## Getting Started
 
-NOTE: You can also fork the project from Github and open it in your IDE or other editor.
+### Prerequisites
 
-NOTE: For Spring 3.0 you need Java 17 or later, regardless of whether you use Spring Initializr.
+- Java 17 or later
+- Maven 3.6+ or Gradle
+- Spring Boot 3.3.0
 
-[[initial]]
-== Create a Simple Web Application
+### Building the Application
 
-Now you can create a web controller for a simple web application, as the following listing
-(from `src/main/java/com/example/springboot/HelloController.java`) shows:
+```bash
+# Using Maven
+./mvnw clean package
 
-====
-[source,java]
-----
-include::initial/src/main/java/com/example/springboot/HelloController.java[]
-----
-====
+# Using Gradle
+./gradlew build
+```
 
-The class is flagged as a `@RestController`, meaning it is ready for use by Spring MVC to
-handle web requests. `@GetMapping` maps `/` to the `index()` method. When invoked from
-a browser or by using curl on the command line, the method returns pure text. That is
-because `@RestController` combines `@Controller` and `@ResponseBody`, two annotations that
-results in web requests returning data rather than a view.
+### Running the Application
 
-== Create an Application class
-
-The Spring Initializr creates a simple application class for you. However, in this case,
-it is too simple. You need to modify the application class to match the following listing
-(from `src/main/java/com/example/springboot/Application.java`):
-
-====
-[source,java]
-----
-include::complete/src/main/java/com/example/springboot/Application.java[]
-----
-====
-
-include::https://raw.githubusercontent.com/spring-guides/getting-started-macros/main/spring-boot-application-new-path.adoc[]
-
-There is also a `CommandLineRunner` method marked as a `@Bean`, and this runs on start up.
-It retrieves all the beans that were created by your application or that were
-automatically added by Spring Boot. It sorts them and prints them out.
-
-== Run the Application
-
-To run the application, run the following command in a terminal window (in the `complete`)
-directory:
-
-====
-[source,text]
-----
-./gradlew bootRun
-----
-====
-
-If you use Maven, run the following command in a terminal window (in the `complete`)
-directory:
-
-====
-[source,text]
-----
+```bash
+# Using Maven
 ./mvnw spring-boot:run
-----
-====
 
-You should see output similar to the following:
-
-====
-[source,text]
-----
-Let's inspect the beans provided by Spring Boot:
-application
-beanNameHandlerMapping
-defaultServletHandlerMapping
-dispatcherServlet
-embeddedServletContainerCustomizerBeanPostProcessor
-handlerExceptionResolver
-helloController
-httpRequestHandlerAdapter
-messageSource
-mvcContentNegotiationManager
-mvcConversionService
-mvcValidator
-org.springframework.boot.autoconfigure.MessageSourceAutoConfiguration
-org.springframework.boot.autoconfigure.PropertyPlaceholderAutoConfiguration
-org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration
-org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration$DispatcherServletConfiguration
-org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration$EmbeddedTomcat
-org.springframework.boot.autoconfigure.web.ServerPropertiesAutoConfiguration
-org.springframework.boot.context.embedded.properties.ServerProperties
-org.springframework.context.annotation.ConfigurationClassPostProcessor.enhancedConfigurationProcessor
-org.springframework.context.annotation.ConfigurationClassPostProcessor.importAwareProcessor
-org.springframework.context.annotation.internalAutowiredAnnotationProcessor
-org.springframework.context.annotation.internalCommonAnnotationProcessor
-org.springframework.context.annotation.internalConfigurationAnnotationProcessor
-org.springframework.context.annotation.internalRequiredAnnotationProcessor
-org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration
-propertySourcesBinder
-propertySourcesPlaceholderConfigurer
-requestMappingHandlerAdapter
-requestMappingHandlerMapping
-resourceHandlerMapping
-simpleControllerHandlerAdapter
-tomcatEmbeddedServletContainerFactory
-viewControllerHandlerMapping
-----
-====
-
-You can clearly see `org.springframework.boot.autoconfigure` beans. There is also a `tomcatEmbeddedServletContainerFactory`.
-
-Now run the service with curl (in a separate terminal window), by running the following
-command (shown with its output):
-
-====
-[source,text]
-----
-$ curl http://localhost:8080
-Greetings from Spring Boot!
-----
-====
-
-== Add Unit Tests
-
-You will want to add a test for the endpoint you added, and Spring Test provides some
-machinery for that.
-
-If you use Gradle, add the following dependency to your `build.gradle` file:
-
-[source,groovy,indent=0]
-----
-include::complete/build.gradle[tag=tests]
-----
-
-If you use Maven, add the following to your `pom.xml` file:
-
-[source,xml,indent=0]
-----
-include::complete/pom.xml[tag=tests]
-----
-
-Now write a simple unit test that mocks the servlet request and response through your
-endpoint, as the following listing (from
-`src/test/java/com/example/springboot/HelloControllerTest.java`) shows:
-
-====
-[source,java]
-----
-include::complete/src/test/java/com/example/springboot/HelloControllerTest.java[]
-----
-====
-
-`MockMvc` comes from Spring Test and lets you, through a set of convenient builder
-classes, send HTTP requests into the `DispatcherServlet` and make assertions about the
-result. Note the use of `@AutoConfigureMockMvc` and `@SpringBootTest` to inject a
-`MockMvc` instance. Having used `@SpringBootTest`, we are asking for the whole application
-context to be created. An alternative would be to ask Spring Boot to create only the web
-layers of the context by using `@WebMvcTest`. In either case, Spring Boot automatically
-tries to locate the main application class of your application, but you can override it or
-narrow it down if you want to build something different.
-
-As well as mocking the HTTP request cycle, you can also use Spring Boot to write a simple
-full-stack integration test. For example, instead of (or as well as) the mock test shown
-earlier, we could create the following test (from
-`src/test/java/com/example/springboot/HelloControllerITest.java`):
-
-====
-[source,java]
-----
-include::complete/src/test/java/com/example/springboot/HelloControllerITest.java[]
-----
-====
-
-The embedded server starts on a random port because of
-`webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT`, and the actual port is
-configured automatically in the base URL for the `TestRestTemplate`.
-
-== Add Production-grade Services
-
-If you are building a web site for your business, you probably need to add some management
-services. Spring Boot provides several such services (such as health, audits, beans, and
-more) with its
-http://docs.spring.io/spring-boot/docs/{spring_boot_version}/reference/htmlsingle/#actuator[actuator module].
-
-If you use Gradle, add the following dependency to your `build.gradle` file:
-
-[source,groovy,indent=0]
-----
-include::complete/build.gradle[tag=actuator]
-----
-
-If you use Maven, add the following dependency to your `pom.xml` file:
-
-[source,xml,indent=0]
-----
-include::complete/pom.xml[tag=actuator]
-----
-
-Then restart the application. If you use Gradle, run the following command in a terminal
-window (in the `complete` directory):
-
-====
-[subs="attributes"]
-----
+# Using Gradle
 ./gradlew bootRun
-----
-====
 
-If you use Maven, run the following command in a terminal window (in the `complete`
-directory):
+# Or run the JAR
+java -jar target/spring-boot-complete-0.0.1-SNAPSHOT.jar
+```
 
-====
-[subs="attributes"]
-----
-./mvnw spring-boot:run
-----
-====
+### Running Without Web Server
 
-You should see that a new set of RESTful end points have been added to the application.
-These are management services provided by Spring Boot. The following listing shows typical
-output:
+If you only need the monitoring service without the web server:
 
-====
-[source,text]
-----
-management.endpoint.configprops-org.springframework.boot.actuate.autoconfigure.context.properties.ConfigurationPropertiesReportEndpointProperties
-management.endpoint.env-org.springframework.boot.actuate.autoconfigure.env.EnvironmentEndpointProperties
-management.endpoint.health-org.springframework.boot.actuate.autoconfigure.health.HealthEndpointProperties
-management.endpoint.logfile-org.springframework.boot.actuate.autoconfigure.logging.LogFileWebEndpointProperties
-management.endpoints.jmx-org.springframework.boot.actuate.autoconfigure.endpoint.jmx.JmxEndpointProperties
-management.endpoints.web-org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties
-management.endpoints.web.cors-org.springframework.boot.actuate.autoconfigure.endpoint.web.CorsEndpointProperties
-management.health.diskspace-org.springframework.boot.actuate.autoconfigure.system.DiskSpaceHealthIndicatorProperties
-management.info-org.springframework.boot.actuate.autoconfigure.info.InfoContributorProperties
-management.metrics-org.springframework.boot.actuate.autoconfigure.metrics.MetricsProperties
-management.metrics.export.simple-org.springframework.boot.actuate.autoconfigure.metrics.export.simple.SimpleProperties
-management.server-org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties
-----
-====
+```bash
+./mvnw spring-boot:run -- -no-web
+```
 
-The actuator exposes the following:
+## Configuration
 
-* http://localhost:8080/actuator/health[actuator/health]
-* http://localhost:8080/actuator[actuator]
+### Monitoring Rules Configuration
 
-NOTE: There is also an `/actuator/shutdown` endpoint, but, by default, it is visible only
-through JMX. To http://docs.spring.io/spring-boot/docs/{spring_boot_version}/reference/htmlsingle/#production-ready-endpoints-enabling-endpoints[enable it as an HTTP endpoint], add
-`management.endpoint.shutdown.enabled=true` to your `application.properties` file
-and expose it with `management.endpoints.web.exposure.include=health,info,shutdown`.
-However, you probably should not enable the shutdown endpoint for a publicly available
-application.
+Monitoring rules are defined in `src/main/resources/monitoring-rules.json`:
 
-You can check the health of the application by running the following command:
+```json
+[
+  {
+    "logFile": "/var/logs/payment-service.log",
+    "pattern": "level=ERROR",
+    "severity": "CRITICAL",
+    "destination": "console"
+  },
+  {
+    "logFile": "/var/logs/auth-service.log",
+    "pattern": "\"level\":\\s*\"WARN\"",
+    "severity": "WARNING",
+    "destination": "console"
+  }
+]
+```
 
-====
-[source,bash]
-----
-$ curl http://localhost:8080/actuator/health
-{"status":"UP"}
-----
-====
+### Configuration File Format
 
-You can try also to invoke shutdown through curl, to see what happens when you have not
-added the necessary line (shown in the preceding note) to `application.properties`:
+Each monitoring rule contains:
 
-====
-[source,bash]
-----
-$ curl -X POST http://localhost:8080/actuator/shutdown
-{"timestamp":1401820343710,"error":"Not Found","status":404,"message":"","path":"/actuator/shutdown"}
-----
-====
+- **logFile** (string, required): Absolute or relative path to the log file to monitor
+- **pattern** (string, required): Regular expression pattern to match in log lines
+- **severity** (string, required): Alert severity level (e.g., CRITICAL, WARNING, INFO)
+- **destination** (string, required): Where to send alerts (currently supports "console")
 
-Because we did not enable it, the requested endpoint is not available (because the endpoint does not
-exist).
+### Custom Configuration Path
 
-For more details about each of these REST endpoints and how you can tune their settings
-with an `application.properties` file (in `src/main/resources`), see the
-the http://docs.spring.io/spring-boot/docs/{spring_boot_version}/reference/htmlsingle/#production-ready-endpoints[documentation about the endpoints].
+You can specify a custom configuration file path:
 
-== View Spring Boot's Starters
+```bash
+java -Dmonitoring.config=/path/to/your/rules.json -jar target/spring-boot-complete-0.0.1-SNAPSHOT.jar
+```
 
-You have seen some of
-http://docs.spring.io/spring-boot/docs/{spring_boot_version}/reference/htmlsingle/#using-boot-starter[Spring Boot's "`starters`"].
-You can see them all
-https://github.com/spring-projects/spring-boot/tree/main/spring-boot-project/spring-boot-starters[here in source code].
+## Usage Examples
 
-== JAR Support
+### Example 1: Key-Value Pair Log Format
 
-The last example showed how Spring Boot lets you wire beans that you may not be aware you
-need. It also showed how to turn on convenient management services.
+**Log File** (`payment-service.log`):
+```
+timestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card declined" transaction_id=tx_124
+```
 
-However, Spring Boot does more than that. It supports not only traditional WAR file
-deployments but also lets you put together executable JARs, thanks to Spring Boot's loader
-module. The various guides demonstrate this dual support through the
-`spring-boot-gradle-plugin` and `spring-boot-maven-plugin`.
+**Configuration**:
+```json
+{
+  "logFile": "/var/logs/payment-service.log",
+  "pattern": "level=ERROR",
+  "severity": "CRITICAL",
+  "destination": "console"
+}
+```
 
+### Example 2: JSON Log Format
 
-== Summary
+**Log File** (`auth-service.log`):
+```json
+{"time": "2025-09-19T12:31:15Z", "level": "WARN", "message": "Failed login attempt", "ip_address": "192.168.1.100"}
+```
 
-Congratulations! You built a simple web application with Spring Boot and learned how it
-can ramp up your development pace. You also turned on some handy production services.
-This is only a small sampling of what Spring Boot can do. See
-http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle[Spring Boot's online docs]
-for much more information.
+**Configuration**:
+```json
+{
+  "logFile": "/var/logs/auth-service.log",
+  "pattern": "\"level\":\\s*\"WARN\"",
+  "severity": "WARNING",
+  "destination": "console"
+}
+```
 
-== See Also
+## Alert Format
 
-The following guides may also be helpful:
+All alerts are generated in a standardized JSON format:
 
-* https://spring.io/guides/gs/securing-web/[Securing a Web Application]
-* https://spring.io/guides/gs/serving-web-content/[Serving Web Content with Spring MVC]
+```json
+{
+  "timestamp": "2025-09-19T12:30:05Z",
+  "severity": "CRITICAL",
+  "sourceFile": "/var/logs/payment-service.log",
+  "matchedPattern": "level=ERROR",
+  "logLine": "timestamp=2025-09-19T12:30:05Z level=ERROR msg=\"Credit card declined\" transaction_id=tx_124",
+  "metadata": {}
+}
+```
 
-include::https://raw.githubusercontent.com/spring-guides/getting-started-macros/main/footer.adoc[]
+## How It Works
+
+### File Monitoring Process
+
+1. **Configuration Loading**: On startup, the service loads monitoring rules from the configuration file
+2. **File Existence Check**: For each rule, checks if the log file exists
+   - If exists: Starts monitoring immediately
+   - If not exists: Queues the file for monitoring (checks every 5 seconds)
+3. **Real-time Monitoring**: Uses Apache Commons IO Tailer to poll files every 100ms
+4. **Pattern Matching**: Each new line is checked against the configured pattern
+5. **Alert Generation**: When a pattern matches, generates and sends a standardized alert
+
+### Hot Reload Process
+
+1. **Configuration Watcher**: Monitors the configuration file for changes
+2. **Change Detection**: Detects when the configuration file is modified
+3. **Automatic Reload**: Reloads rules and updates monitoring without restart
+
+### Pending Files Handling
+
+- Files that don't exist when rules are loaded are queued
+- Background thread checks every 5 seconds for file creation
+- When a file appears, monitoring starts automatically
+- Logs indicate when files are pending and when monitoring begins
+
+## Project Structure
+
+```
+complete/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/
+│   │   │   ├── Application.java              # Main application entry point
+│   │   │   ├── LogFileMonitor.java           # Core file monitoring service
+│   │   │   ├── LogMonitoringService.java     # Monitoring orchestration
+│   │   │   ├── LogPatternMatcher.java        # Pattern matching service
+│   │   │   ├── AlertService.java             # Alert generation service
+│   │   │   ├── MonitoringConfigService.java   # Configuration management
+│   │   │   └── logs/                         # Sample log files
+│   │   └── resources/
+│   │       └── monitoring-rules.json          # Monitoring rules configuration
+│   └── test/
+│       └── java/com/example/
+└── pom.xml                                    # Maven configuration
+```
+
+## Dependencies
+
+- **Spring Boot 3.3.0**: Application framework
+- **Apache Commons IO 2.15.1**: File tailing functionality
+- **Lombok 1.18.32**: Reduces boilerplate code
+- **Jackson**: JSON processing (included with Spring Boot)
+
+## Logging
+
+The application uses SLF4J with Logback (provided by Spring Boot). Log levels:
+
+- **INFO**: General application flow, rule loading, file monitoring start/stop
+- **WARN**: Missing files, configuration issues
+- **DEBUG**: Pattern matching details, line processing
+- **ERROR**: Exceptions, pattern matching errors
+
+## Limitations and Considerations
+
+1. **Polling Interval**: Files are polled every 100ms. For lower latency, reduce the interval (may increase CPU usage)
+2. **File Paths**: Use absolute paths for production. Relative paths are relative to the working directory
+3. **Pattern Matching**: Uses Java regular expressions. Ensure patterns are properly escaped for JSON config
+4. **File Rotation**: Handled automatically, but very rapid rotations may miss some lines
+5. **Concurrent Writes**: Works best with append-only log files
+
+## Future Enhancements
+
+Potential improvements:
+
+- [ ] Webhook destination support for alerts
+- [ ] Database storage for alert history
+- [ ] REST API for dynamic rule management
+- [ ] Metrics and monitoring endpoints
+- [ ] Support for multiple pattern matching per file
+- [ ] Alert rate limiting and deduplication
+- [ ] Support for log file compression formats
+
+## Troubleshooting
+
+### Files Not Being Monitored
+
+- Check file paths are correct (use absolute paths)
+- Verify file permissions (read access required)
+- Check logs for "file does not exist" warnings
+- For pending files, wait up to 5 seconds after file creation
+
+### Patterns Not Matching
+
+- Verify regex pattern syntax
+- Check for case sensitivity issues
+- Use debug logging to see pattern matching results
+- Test patterns with online regex testers
+
+### Configuration Not Reloading
+
+- Ensure configuration file is saved completely
+- Check file watcher permissions
+- Verify configuration JSON is valid
+- Check logs for reload errors
+
+## License
+
+This project is for educational/demonstration purposes.
+
+## References
+
+- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
+- [Apache Commons IO](https://commons.apache.org/proper/commons-io/)
+- [Java Regular Expressions](https://docs.oracle.com/javase/tutorial/essential/regex/)
+
