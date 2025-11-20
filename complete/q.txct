@@ -1,0 +1,35 @@
+Problem Statement
+In a microservices ecosystem, dozens of services run concurrently, each generating its own stream of logs. 
+To maintain system health and ensure reliability, engineering teams need a way to automatically detect critical events—such as 
+errors, security anomalies, or performance degradation—as they happen.
+Assume that logs from different applications (auth-service, payment-service, etc.) are being written to distinct files
+ on a local file system (e.g., /var/logs/auth-service.log, /var/logs/payment-service.log). Each application has its own 
+ unique log format (e.g., JSON, key-value pairs, plain text).
+
+Objective
+Design and implement a lightweight service that actively monitors specified log files for important patterns. 
+When a pattern is detected, the service should immediately generate a standardized alert and send it to a configured destination.
+
+Key Requirements & Considerations
+Real-time Monitoring: The service must process new log entries as soon as they are written to a file, 
+without re-reading the entire file. The latency between a log event and a triggered alert should be minimal.
+Configuration-Driven Rules: The logic for what constitutes an alert must be entirely externalized into a 
+configuration file. The service should not have any hardcoded rules. This configuration will define:
+Which log file to watch.
+The pattern to match (e.g., using a regular expression).
+The alert's severity level (e.g., CRITICAL, WARNING).
+The destination for the alert (e.g., print to console or POST to a webhook).
+Dynamic Configuration: The service must be able to detect changes to its rule configuration and apply them on 
+the fly without requiring a restart. Adding or modifying a rule should instantly change the monitoring behavior.
+Standardized Alert Format: Regardless of the source log format, all triggered alerts must be transformed into a 
+consistent JSON structure before being dispatched.
+
+Example Log Formats & Rules
+Log Example 1: payment-service.log (Key-Value Pairs)
+timestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card declined" transaction_id=tx_124
+Log Example 2: auth-service.log (JSON String per line)
+JSON
+{"time": "2025-09-19T12:31:15Z", "level": "WARN", "message": "Failed login attempt", "ip_address": "192.168.1.100"}
+
+
+schakka@eightfold.ai

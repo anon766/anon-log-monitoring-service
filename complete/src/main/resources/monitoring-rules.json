@@ -1,0 +1,14 @@
+[
+    {
+      "logFile": "D:/Study/Cursor/gs-spring-boot/complete/src/main/java/com/example/logs/payment-service.txt",
+      "pattern": "level=ERROR",
+      "severity": "SEVERE",
+      "destination": "console"
+    },
+    {
+      "logFile": "D:/Study/Cursor/gs-spring-boot/complete/src/main/java/com/example/logs/auth-service.json",
+      "pattern": "\"level\":\\s*\"WARN\"",
+      "severity": "WARNING",
+      "destination": "console"
+    }
+  ]

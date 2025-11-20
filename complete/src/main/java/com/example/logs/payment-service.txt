@@ -1,0 +1,9 @@
+timestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card declined" transaction_id=tx_124
+timestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_124
+imestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_124
+imestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_124
+imestamp=2025-09-19T12:30:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_124
+imestamp=2025-09-19T12:31:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_125
+imestamp=2025-09-19T12:31:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_125
+imestamp=2025-09-19T12:32:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_125
+imestamp=2025-09-19T12:33:05Z level=ERROR msg="Credit card unauthorized" transaction_id=tx_125
