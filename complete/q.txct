@@ -31,5 +31,3 @@ Log Example 2: auth-service.log (JSON String per line)
 JSON
 {"time": "2025-09-19T12:31:15Z", "level": "WARN", "message": "Failed login attempt", "ip_address": "192.168.1.100"}
 
-
-schakka@eightfold.ai
