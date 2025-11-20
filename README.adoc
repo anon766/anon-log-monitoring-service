@@ -1,7 +1,7 @@
 # Log Monitoring Service
 
-A lightweight, real-time log file monitoring service built with Spring Boot that actively monitors specified log files for important patterns and generates standardized alerts when patterns are detected.
-
+A lightweight, real-time log file monitoring service built with Spring Boot that actively monitors specified log files for important patterns and generates standardized alerts when patterns are detected built by Cursor
+The chats can be seen in "complete\cursor_implementing_dynamic_configurati.md" and "complete\cursor_log_monitoring_service_design_ap.md"
 ## Overview
 
 This service is designed for microservices ecosystems where multiple services generate logs in different formats. It provides:
